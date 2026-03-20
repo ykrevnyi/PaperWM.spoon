@@ -52,6 +52,12 @@ function Actions.actions()
         slurp_in = Actions.PaperWM.windows.slurpWindow,
         barf_out = Actions.PaperWM.windows.barfWindow,
         split_screen = Actions.PaperWM.windows.splitScreen,
+        toggle_monocle = function()
+            local space = hs.spaces.focusedSpace()
+            Actions.PaperWM.state.toggleMonocle(space)
+            Actions.PaperWM.logger.df("monocle mode for space %d: %s", space, Actions.PaperWM.state.isMonocle(space))
+            Actions.PaperWM:tileSpace(space)
+        end,
         switch_space_l = Fnutils.partial(Actions.PaperWM.space.incrementSpace, Direction.LEFT),
         switch_space_r = Fnutils.partial(Actions.PaperWM.space.incrementSpace, Direction.RIGHT),
         switch_space_1 = Fnutils.partial(Actions.PaperWM.space.switchToSpace, 1),
