@@ -10,6 +10,7 @@ local ui_watchers = {} -- dictionary of uielement watchers with window id for ke
 local x_positions = {} -- dictionary of horizontal positions with [space][id] for keys
 ---public state
 State.is_floating = {} -- dictionary of boolean with window id for keys
+State.monocle_spaces = {} -- dictionary of boolean with space id for keys
 State.prev_focused_window = nil ---@type Window|nil
 State.pending_window = nil ---@type Window|nil
 
@@ -27,6 +28,7 @@ function State.clear()
     ui_watchers = {}
     x_positions = {}
     State.is_floating = {}
+    State.monocle_spaces = {}
     State.prev_focused_window = nil
     State.pending_window = nil
 end
@@ -153,6 +155,19 @@ function State.xPositions(space)
         end,
         __pairs = function(_) return pairs(x_positions[space] or {}) end,
     })
+end
+
+---check if monocle mode is enabled for a space
+---@param space Space
+---@return boolean
+function State.isMonocle(space)
+    return State.monocle_spaces[space] or false
+end
+
+---toggle monocle mode for a space
+---@param space Space
+function State.toggleMonocle(space)
+    State.monocle_spaces[space] = not State.isMonocle(space) or nil
 end
 
 ---check for the presence of a window in the tiled list

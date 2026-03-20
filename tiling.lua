@@ -107,6 +107,17 @@ function Tiling.tileSpace(space)
     local right_margin <const> = screen_frame.x2 - Tiling.PaperWM.screen_margin
     local canvas <const> = Tiling.PaperWM.windows.getCanvas(screen)
 
+    -- monocle: all windows fullscreen, focused on top
+    if Tiling.PaperWM.state.isMonocle(space) then
+        local monocle_frame = hs.geometry.rect(canvas.x, canvas.y, canvas.w, canvas.h)
+        for _, col_windows in ipairs(Tiling.PaperWM.state.windowList(space)) do
+            for _, window in ipairs(col_windows) do
+                Tiling.PaperWM.windows.moveWindow(window, monocle_frame)
+            end
+        end
+        return
+    end
+
     -- make sure anchor window is on screen
     local anchor_frame = anchor_window:frame()
     anchor_frame.x = math.max(anchor_frame.x, canvas.x)
