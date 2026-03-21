@@ -30,7 +30,7 @@ end
 ---@param id number|nil id of window to set specific height
 ---@param h4id number|nil specific height for provided window id
 ---@return number width of tiled column
-function Tiling.tileColumn(windows, bounds, h, w, id, h4id)
+function Tiling.tileColumn(windows, bounds, h, w, id, h4id, is_stacked)
     local last_window, frame
     local bottom_gap = Tiling.PaperWM.windows.getGap("bottom")
 
@@ -42,22 +42,32 @@ function Tiling.tileColumn(windows, bounds, h, w, id, h4id)
         elseif bounds.x2 then
             frame.x = bounds.x2 - w
         end
-        if h then              -- set height if given
+
+        if is_stacked then
+            -- stack mode: all windows get full column height
+            frame.y = bounds.y
+            frame.h = bounds.y2 - bounds.y
+        elseif h then              -- set height if given
             if id and h4id and window:id() == id then
                 frame.h = h4id -- use this height for window with id
             else
                 frame.h = h    -- use this height for all other windows
             end
         end
-        frame.y = bounds.y
+
         frame.w = w
-        frame.y2 = math.min(frame.y2, bounds.y2) -- don't overflow bottom of bounds
+        if not is_stacked then
+            frame.y = bounds.y
+            frame.y2 = math.min(frame.y2, bounds.y2) -- don't overflow bottom of bounds
+        end
         Tiling.PaperWM.windows.moveWindow(window, frame)
-        bounds.y = math.min(frame.y2 + bottom_gap, bounds.y2)
+        if not is_stacked then
+            bounds.y = math.min(frame.y2 + bottom_gap, bounds.y2)
+        end
         last_window = window
     end
-    -- expand last window height to bottom
-    if frame.y2 ~= bounds.y2 then
+    -- expand last window height to bottom (only for non-stacked)
+    if not is_stacked and frame.y2 ~= bounds.y2 then
         frame.y2 = bounds.y2
         Tiling.PaperWM.windows.moveWindow(last_window, frame)
     end
@@ -135,9 +145,22 @@ function Tiling.tileSpace(space)
     end
 
     -- TODO: need a minimum window height
-    if #column == 1 then
-        anchor_frame.y, anchor_frame.h = canvas.y, canvas.h
-        Tiling.PaperWM.windows.moveWindow(anchor_window, anchor_frame)
+    local is_anchor_stacked = Tiling.PaperWM.state.isColumnStacked(space, anchor_index.col)
+
+    if #column == 1 or is_anchor_stacked then
+        -- single window or stacked: full canvas height for all
+        if #column == 1 then
+            anchor_frame.y, anchor_frame.h = canvas.y, canvas.h
+            Tiling.PaperWM.windows.moveWindow(anchor_window, anchor_frame)
+        else
+            local bounds = {
+                x = anchor_frame.x,
+                x2 = nil,
+                y = canvas.y,
+                y2 = canvas.y2,
+            }
+            Tiling.tileColumn(column, bounds, nil, anchor_frame.w, nil, nil, true)
+        end
     else
         local n = #column - 1 -- number of other windows in column
         local bottom_gap = Tiling.PaperWM.windows.getGap("bottom")
@@ -166,7 +189,8 @@ function Tiling.tileSpace(space)
             y2 = canvas.y2,
         }
         local column = Tiling.PaperWM.state.windowList(space, col)
-        local width = Tiling.tileColumn(column, bounds)
+        local is_stacked = Tiling.PaperWM.state.isColumnStacked(space, col)
+        local width = Tiling.tileColumn(column, bounds, nil, nil, nil, nil, is_stacked)
         update_virtual_positions(space, column, x)
         x = x + width + right_gap
     end
@@ -181,7 +205,8 @@ function Tiling.tileSpace(space)
             y2 = canvas.y2,
         }
         local column = Tiling.PaperWM.state.windowList(space, col)
-        local width = Tiling.tileColumn(column, bounds)
+        local is_stacked = Tiling.PaperWM.state.isColumnStacked(space, col)
+        local width = Tiling.tileColumn(column, bounds, nil, nil, nil, nil, is_stacked)
         update_virtual_positions(space, column, x2 - width)
         x2 = x2 - width - left_gap
     end

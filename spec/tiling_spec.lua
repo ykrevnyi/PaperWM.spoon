@@ -105,6 +105,91 @@ describe("PaperWM.tiling", function()
         end)
     end)
 
+    describe("tileColumn stacked", function()
+        it("should give all windows full height when stacked", function()
+            local win1 = mock_window(101, "Window 1", { x = 0, y = 0, w = 100, h = 100 })
+            local win2 = mock_window(102, "Window 2", { x = 0, y = 0, w = 100, h = 100 })
+            local bounds = { x = 10, y = 20, x2 = 110, y2 = 780 }
+
+            Tiling.tileColumn({ win1, win2 }, bounds, nil, nil, nil, nil, true)
+
+            local frame1 = win1:frame()
+            assert.are.equal(10, frame1.x)
+            assert.are.equal(20, frame1.y)
+            assert.are.equal(760, frame1.h)
+            assert.are.equal(100, frame1.w)
+
+            local frame2 = win2:frame()
+            assert.are.equal(10, frame2.x)
+            assert.are.equal(20, frame2.y)
+            assert.are.equal(760, frame2.h)
+            assert.are.equal(100, frame2.w)
+        end)
+
+        it("should not advance bounds.y when stacked", function()
+            local win1 = mock_window(101, "Window 1", { x = 0, y = 0, w = 100, h = 100 })
+            local win2 = mock_window(102, "Window 2", { x = 0, y = 0, w = 100, h = 100 })
+            local bounds = { x = 10, y = 20, x2 = 110, y2 = 780 }
+
+            Tiling.tileColumn({ win1, win2 }, bounds, nil, nil, nil, nil, true)
+
+            -- bounds.y should not have been advanced
+            assert.are.equal(20, bounds.y)
+        end)
+    end)
+
+    describe("tileSpace stacked", function()
+        it("should tile stacked anchor column with full height windows", function()
+            mock_paperwm.external_bar = nil
+            local win1 = mock_window(101, "Window 1", { x = 0, y = 0, w = 100, h = 100 })
+            local win2 = mock_window(102, "Window 2", { x = 0, y = 108, w = 100, h = 100 })
+            Windows.addWindow(win1)
+            table.insert(State.windowList(1, 1), win2)
+            focused_window = win1
+
+            -- stack the column
+            State.toggleColumnStack(1, 1)
+
+            Tiling.tileSpace(1)
+
+            local frame1 = win1:frame()
+            local frame2 = win2:frame()
+            -- both should have full canvas height
+            assert.are.equal(frame1.y, frame2.y)
+            assert.are.equal(frame1.h, frame2.h)
+        end)
+
+        it("should not affect other columns when one is stacked", function()
+            mock_paperwm.external_bar = nil
+            local win1 = mock_window(101, "Window 1", { x = 0, y = 0, w = 100, h = 100 })
+            local win2 = mock_window(102, "Window 2", { x = 0, y = 108, w = 100, h = 100 })
+            local win3 = mock_window(103, "Window 3", { x = 200, y = 0, w = 100, h = 100 })
+            local win4 = mock_window(104, "Window 4", { x = 200, y = 108, w = 100, h = 100 })
+
+            -- column 1: win1, win2 (stacked)
+            Windows.addWindow(win1)
+            table.insert(State.windowList(1, 1), win2)
+            -- column 2: win3, win4 (normal)
+            table.insert(State.windowList(1), { win3, win4 })
+
+            focused_window = win1
+            State.toggleColumnStack(1, 1)
+
+            Tiling.tileSpace(1)
+
+            -- stacked column: both full height
+            local frame1 = win1:frame()
+            local frame2 = win2:frame()
+            assert.are.equal(frame1.y, frame2.y)
+            assert.are.equal(frame1.h, frame2.h)
+
+            -- normal column: different y positions
+            local frame3 = win3:frame()
+            local frame4 = win4:frame()
+            assert.are_not.equal(frame3.y, frame4.y)
+        end)
+    end)
+
     describe("tileColumn", function()
         it("should tile a single window to fit in the bounds", function()
             local win = mock_window(101, "Test Window", { x = 0, y = 0, w = 100, h = 100 })

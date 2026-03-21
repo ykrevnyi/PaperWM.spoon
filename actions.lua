@@ -58,6 +58,18 @@ function Actions.actions()
             Actions.PaperWM.logger.df("monocle mode for space %d: %s", space, Actions.PaperWM.state.isMonocle(space))
             Actions.PaperWM:tileSpace(space)
         end,
+        toggle_stack = function()
+            local focused_window = hs.window.focusedWindow()
+            if not focused_window then return end
+            local focused_index = Actions.PaperWM.state.windowIndex(focused_window)
+            if not focused_index then return end
+            if Actions.PaperWM.state.isMonocle(focused_index.space) then return end
+            Actions.PaperWM.state.toggleColumnStack(focused_index.space, focused_index.col)
+            Actions.PaperWM.logger.df("stack mode for column %d on space %d: %s",
+                focused_index.col, focused_index.space,
+                Actions.PaperWM.state.isColumnStacked(focused_index.space, focused_index.col))
+            Actions.PaperWM:tileSpace(focused_index.space)
+        end,
         switch_space_l = Fnutils.partial(Actions.PaperWM.space.incrementSpace, Direction.LEFT),
         switch_space_r = Fnutils.partial(Actions.PaperWM.space.incrementSpace, Direction.RIGHT),
         switch_space_1 = Fnutils.partial(Actions.PaperWM.space.switchToSpace, 1),

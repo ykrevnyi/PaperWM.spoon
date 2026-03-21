@@ -259,6 +259,69 @@ describe("PaperWM.windows", function()
         end)
     end)
 
+    describe("slurpWindow into stacked column", function()
+        it("should propagate stacked flag to the slurped window", function()
+            local win1 = mock_window(101, "Window 1", { x = 0, y = 0, w = 100, h = 100 })
+            local win2 = mock_window(102, "Window 2", { x = 200, y = 0, w = 100, h = 100 })
+            Windows.addWindow(win1)
+            Windows.addWindow(win2)
+
+            -- stack column 1
+            State.toggleColumnStack(1, 1)
+            assert.is_true(State.isColumnStacked(1, 1))
+
+            -- slurp win2 into stacked column 1
+            focused_window = win2
+            Windows.slurpWindow()
+
+            -- win2 should now have stacked flag
+            local state = State.get()
+            assert.is_true(state.stacked_windows[102])
+        end)
+    end)
+
+    describe("barfWindow from stacked column", function()
+        it("should clear stacked flag on the barfed window", function()
+            local win1 = mock_window(101, "Window 1", { x = 0, y = 0, w = 100, h = 100 })
+            local win2 = mock_window(102, "Window 2", { x = 0, y = 108, w = 100, h = 100 })
+            Windows.addWindow(win1)
+            table.insert(State.windowList(1, 1), win2)
+
+            -- stack the column
+            State.toggleColumnStack(1, 1)
+            local state = State.get()
+            assert.is_true(state.stacked_windows[101])
+            assert.is_true(state.stacked_windows[102])
+
+            -- barf win1 out
+            focused_window = win1
+            Windows.barfWindow()
+
+            -- win1 should no longer be stacked
+            state = State.get()
+            assert.is_nil(state.stacked_windows[101])
+            -- win2 should still be stacked
+            assert.is_true(state.stacked_windows[102])
+        end)
+    end)
+
+    describe("removeWindow clears stacked state", function()
+        it("should clear stacked flag when window is removed", function()
+            local win1 = mock_window(101, "Window 1", { x = 0, y = 0, w = 100, h = 100 })
+            local win2 = mock_window(102, "Window 2", { x = 200, y = 0, w = 100, h = 100 })
+            Windows.addWindow(win1)
+            Windows.addWindow(win2)
+
+            State.toggleColumnStack(1, 1)
+            local state = State.get()
+            assert.is_true(state.stacked_windows[101])
+
+            Windows.removeWindow(win1, true)
+            state = State.get()
+            assert.is_nil(state.stacked_windows[101])
+        end)
+    end)
+
     describe("splitScreen", function()
         it("should split screen the focused window the left window", function()
             local win1 = mock_window(101, "Window 1")
