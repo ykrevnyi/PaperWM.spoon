@@ -8,6 +8,7 @@ local window_list = {} -- 3D array of tiles in order of [space][x][y]
 local index_table = {} -- dictionary of {space, x, y} with window id for keys
 local ui_watchers = {} -- dictionary of uielement watchers with window id for keys
 local x_positions = {} -- dictionary of horizontal positions with [space][id] for keys
+local stacked_windows = {} -- dictionary of boolean with window id for keys
 ---public state
 State.is_floating = {} -- dictionary of boolean with window id for keys
 State.monocle_spaces = {} -- dictionary of boolean with space id for keys
@@ -29,6 +30,7 @@ function State.clear()
     x_positions = {}
     State.is_floating = {}
     State.monocle_spaces = {}
+    stacked_windows = {}
     State.prev_focused_window = nil
     State.pending_window = nil
 end
@@ -170,6 +172,48 @@ function State.toggleMonocle(space)
     State.monocle_spaces[space] = not State.isMonocle(space) or nil
 end
 
+---check if a column is in stack mode
+---a column is stacked if any window in it has the stacked flag
+---@param space Space
+---@param col number
+---@return boolean
+function State.isColumnStacked(space, col)
+    local column = State.windowList(space, col)
+    if not column then return false end
+    for _, window in ipairs(column) do
+        if stacked_windows[window:id()] then return true end
+    end
+    return false
+end
+
+---toggle stack mode for all windows in a column
+---@param space Space
+---@param col number
+function State.toggleColumnStack(space, col)
+    local column = State.windowList(space, col)
+    if not column then return end
+    local is_stacked = State.isColumnStacked(space, col)
+    for _, window in ipairs(column) do
+        if is_stacked then
+            stacked_windows[window:id()] = nil
+        else
+            stacked_windows[window:id()] = true
+        end
+    end
+end
+
+---set the stacked flag for a specific window
+---@param id number Window ID
+function State.setStacked(id)
+    stacked_windows[id] = true
+end
+
+---clear the stacked flag for a specific window
+---@param id number Window ID
+function State.clearStacked(id)
+    stacked_windows[id] = nil
+end
+
 ---check for the presence of a window in the tiled list
 ---@param id number Window ID
 ---@return boolean
@@ -184,6 +228,7 @@ function State.get()
         index_table = index_table,
         ui_watchers = ui_watchers,
         x_positions = x_positions,
+        stacked_windows = stacked_windows,
         is_floating = State.is_floating,
         prev_focused_window = State.prev_focused_window,
         pending_window = State.pending_window,
@@ -214,6 +259,11 @@ function State.dump()
     table.insert(output, "\nis_floating:")
     for id, floating in pairs(State.is_floating) do
         if floating then table.insert(output, string.format("  Window ID %d is floating", id)) end
+    end
+
+    table.insert(output, "\nstacked_windows:")
+    for id, stacked in pairs(stacked_windows) do
+        if stacked then table.insert(output, string.format("  Window ID %d is stacked", id)) end
     end
 
     table.insert(output, "\nx_positions:")

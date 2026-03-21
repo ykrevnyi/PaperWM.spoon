@@ -224,6 +224,9 @@ function Windows.removeWindow(remove_window, skip_new_window_focus)
     -- clear window position
     Windows.PaperWM.state.xPositions(remove_index.space)[remove_window:id()] = nil
 
+    -- clear stacked state
+    Windows.PaperWM.state.clearStacked(remove_window:id())
+
     -- clear dangling reference
     if Windows.PaperWM.state.prev_focused_window == remove_window then
         Windows.PaperWM.state.prev_focused_window = nil
@@ -654,6 +657,11 @@ function Windows.slurpWindow()
     assert(focused_window == table.remove(current_column, focused_index.row))
     table.insert(target_column, focused_window)
 
+    -- propagate stacked flag if target column is stacked
+    if Windows.PaperWM.state.isColumnStacked(focused_index.space, target_index) then
+        Windows.PaperWM.state.setStacked(focused_window:id())
+    end
+
     -- final column frames should be equal in height
     local final_column = Windows.PaperWM.state.windowList(focused_index.space, target_index)
     tile_column_equaly(final_column)
@@ -696,6 +704,7 @@ function Windows.barfWindow()
     -- remove window and insert in new column
     local target_column = focused_index.col + 1
     assert(focused_window == table.remove(current_column, focused_index.row))
+    Windows.PaperWM.state.clearStacked(focused_window:id())
     table.insert(Windows.PaperWM.state.windowList(focused_index.space), target_column, { focused_window })
 
     -- move focused window to target column location
