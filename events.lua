@@ -84,6 +84,9 @@ function Events.windowEventHandler(window, event, self)
         end
         self.state.prev_focused_window = window -- for addWindow()
         space = Spaces.windowSpaces(window)[1]
+        -- skip retiling in monocle mode: windows are already fullscreen,
+        -- focus alone brings the window to front
+        if space and self.state.isMonocle(space) then return end
     elseif event == "windowVisible" or event == "windowUnfullscreened" then
         space = self.windows.addWindow(window)
         if self.state.pending_window and window == self.state.pending_window then
