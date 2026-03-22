@@ -364,7 +364,10 @@ function Windows.focusWindow(direction, focused_index)
     new_focused_window:focus()
 
     -- try to prevent MacOS from stealing focus away to another window
-    Timer.doAfter(Window.animationDuration, function()
+    -- cancel any previous refocus timer to avoid flickering on rapid key presses
+    if Windows.refocus_timer then Windows.refocus_timer:stop() end
+    Windows.refocus_timer = Timer.doAfter(Window.animationDuration, function()
+        Windows.refocus_timer = nil
         if Window.focusedWindow() ~= new_focused_window then
             Windows.PaperWM.logger.df("refocusing window %s", new_focused_window)
             new_focused_window:focus()
