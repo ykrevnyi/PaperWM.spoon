@@ -106,6 +106,12 @@ function PaperWM:start()
     -- populate window list, index table, ui_watchers, and set initial layout
     self.windows.refreshWindows()
 
+    -- restore saved layout state (stacking, monocle, window ordering)
+    self.state.restore()
+
+    -- start periodic state persistence
+    self.state.startAutoSave()
+
     -- start event listeners
     self.events.start()
 
@@ -115,6 +121,10 @@ end
 ---stop automatic window tiling
 ---@return PaperWM
 function PaperWM:stop()
+    -- stop auto-save and do a final save
+    self.state.stopAutoSave()
+    self.state.save()
+
     -- stop events
     self.events.stop()
 

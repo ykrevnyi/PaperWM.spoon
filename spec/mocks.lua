@@ -56,11 +56,24 @@ function M.get_mock_paperwm(modules)
         },
         screen_margin = 8,
         window_gap = 8,
-        tileSpace = function(space) modules.Tiling.tileSpace(space) end,
+        tileSpace = function(_, space) if modules.Tiling then modules.Tiling.tileSpace(space) end end,
     }
 end
 
+-- Registry for mock windows accessible via hs.window.get()
+M.window_registry = {}
+
+function M.register_window(window)
+    M.window_registry[window:id()] = window
+end
+
+function M.clear_window_registry()
+    M.window_registry = {}
+end
+
 function M.init_mocks(modules)
+    M.clear_window_registry()
+    local settings_store = {}
     _G.hs = {
         spaces = {
             windowSpaces = function(_) return { 1 } end,
@@ -84,6 +97,7 @@ function M.init_mocks(modules)
         window = {
             animationDuration = 0.0,
             focusedWindow = function() return nil end,
+            get = function(id) return M.window_registry[id] end,
         },
         geometry = {
             rect = function(x, y, w, h) return { x = x, y = y, w = w, h = h, x2 = x + w, y2 = y + h } end,
@@ -135,13 +149,20 @@ function M.init_mocks(modules)
             secondsSinceEpoch = function() return 0 end,
             doUntil = function(c, t, d) c() end,
             doAfter = function(delay, fn) fn() end,
+            doEvery = function(interval, fn)
+                return {
+                    _running = true,
+                    stop = function(self) self._running = false end,
+                }
+            end,
         },
         mouse = {
             absolutePosition = function(_) end,
         },
         settings = {
-            set = function(_, _) end,
-            get = function(_) return {} end,
+            set = function(key, value) settings_store[key] = value end,
+            get = function(key) return settings_store[key] end,
+            clear = function(key) settings_store[key] = nil end,
         },
         notify = {
             show = function(_, _, _, _) end,
