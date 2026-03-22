@@ -235,6 +235,120 @@ function State.get()
     }
 end
 
+---constants
+local LayoutKey <const> = "PaperWM_layout"
+local save_timer = nil
+
+---directly set the columns for a space and update the index
+---@param space Space
+---@param new_columns Window[][]
+function State.rebuildSpace(space, new_columns)
+    window_list[space] = new_columns
+    update_index(space)
+end
+
+---save all layout state to hs.settings
+function State.save()
+    local data = { monocle_spaces = {}, spaces = {} }
+    for space, _ in pairs(State.monocle_spaces) do
+        table.insert(data.monocle_spaces, space)
+    end
+    for space, columns in pairs(window_list) do
+        local space_data = { space = space, columns = {} }
+        for col_idx, column in ipairs(columns) do
+            local col_data = {
+                stacked = State.isColumnStacked(space, col_idx),
+                windows = {},
+            }
+            for _, window in ipairs(column) do
+                table.insert(col_data.windows, window:id())
+            end
+            table.insert(space_data.columns, col_data)
+        end
+        table.insert(data.spaces, space_data)
+    end
+    hs.settings.set(LayoutKey, data)
+end
+
+---restore layout state from hs.settings
+function State.restore()
+    local data = hs.settings.get(LayoutKey)
+    if not data then return end
+
+    -- restore monocle flags
+    if data.monocle_spaces then
+        for _, space in ipairs(data.monocle_spaces) do
+            State.monocle_spaces[space] = true
+        end
+    end
+
+    if not data.spaces then return end
+
+    for _, space_data in ipairs(data.spaces) do
+        local space = space_data.space
+        local current_columns = window_list[space]
+        if not current_columns then goto continue end
+
+        -- collect all currently tiled windows in this space
+        local available = {}
+        for _, col in ipairs(current_columns) do
+            for _, window in ipairs(col) do
+                available[window:id()] = window
+            end
+        end
+
+        -- rebuild columns from saved layout
+        local new_columns = {}
+        local placed = {}
+
+        for _, col_data in ipairs(space_data.columns) do
+            local column = {}
+            for _, win_id in ipairs(col_data.windows) do
+                local window = available[win_id]
+                if window then
+                    table.insert(column, window)
+                    placed[win_id] = true
+                end
+            end
+            if #column > 0 then
+                -- apply stacked flag only if column has multiple windows
+                if col_data.stacked and #column > 1 then
+                    for _, window in ipairs(column) do
+                        stacked_windows[window:id()] = true
+                    end
+                end
+                table.insert(new_columns, column)
+            end
+        end
+
+        -- append windows not in saved state
+        for id, window in pairs(available) do
+            if not placed[id] then
+                table.insert(new_columns, { window })
+            end
+        end
+
+        State.rebuildSpace(space, new_columns)
+        State.PaperWM:tileSpace(space)
+
+        ::continue::
+    end
+end
+
+---start periodic auto-save timer
+function State.startAutoSave()
+    State.stopAutoSave()
+    save_timer = hs.timer.doEvery(3, State.save)
+end
+
+---stop periodic auto-save timer
+function State.stopAutoSave()
+    if save_timer then
+        save_timer:stop()
+        save_timer = nil
+    end
+end
+
 ---pretty print the current state
 function State.dump()
     local output = { "--- PaperWM State ---" }
