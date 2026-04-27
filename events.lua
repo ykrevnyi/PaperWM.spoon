@@ -83,7 +83,7 @@ function Events.windowEventHandler(window, event, self)
             return
         end
         self.state.prev_focused_window = window -- for addWindow()
-        space = Spaces.windowSpaces(window)[1]
+        space = Spaces.windowSpaces(window)[1] or Spaces.focusedSpace()
         -- skip retiling in monocle mode: windows are already fullscreen,
         -- focus alone brings the window to front
         if space and self.state.isMonocle(space) then return end
@@ -104,7 +104,7 @@ function Events.windowEventHandler(window, event, self)
     elseif event == "windowFullscreened" then
         space = self.windows.removeWindow(window, true) -- don't focus new window if fullscreened
     elseif event == "AXWindowMoved" or event == "AXWindowResized" then
-        space = Spaces.windowSpaces(window)[1]
+        space = Spaces.windowSpaces(window)[1] or Spaces.focusedSpace()
     end
 
     if space then self:tileSpace(space) end

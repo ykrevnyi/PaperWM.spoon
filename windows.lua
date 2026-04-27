@@ -360,8 +360,9 @@ function Windows.focusWindow(direction, focused_index)
         return
     end
 
-    -- focus new window, windowFocused event will be emited immediately
+    -- focus new window and tile the space to scroll it into view
     new_focused_window:focus()
+    Windows.PaperWM:tileSpace(focused_index.space)
 
     -- try to prevent MacOS from stealing focus away to another window
     -- cancel any previous refocus timer to avoid flickering on rapid key presses

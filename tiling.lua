@@ -92,7 +92,7 @@ function Tiling.tileSpace(space)
     -- if focused window is in space, tile from that
     local focused_window = Window.focusedWindow()
     local anchor_window = (function()
-        if focused_window and not Tiling.PaperWM.floating.isFloating(focused_window) and Spaces.windowSpaces(focused_window)[1] == space then
+        if focused_window and not Tiling.PaperWM.floating.isFloating(focused_window) and (Spaces.windowSpaces(focused_window)[1] or Spaces.focusedSpace()) == space then
             return focused_window
         else
             return Tiling.PaperWM.windows.getFirstVisibleWindow(space, screen:frame())
